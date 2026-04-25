@@ -1,0 +1,17 @@
+# Core web framework
+Flask>=3.0,<4.0
+
+# Rate limiting
+Flask-Limiter>=3.5,<4.0
+
+# Image generation (mock camera frames)
+Pillow>=10.0
+
+# Production WSGI server (used by install.sh / systemd)
+gunicorn>=22.0
+
+# python-dotenv: load .env automatically when running locally
+python-dotenv>=1.0
+
+# --- Raspberry Pi only (not installed on dev machines) ---
+# picamera2           # install via: sudo apt install python3-picamera2
