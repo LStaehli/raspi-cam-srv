@@ -72,6 +72,8 @@ Verify the camera is detected:
 
 ```bash
 libcamera-hello --list-cameras
+# or
+rpicam-hello
 ```
 
 ### 2. Clone the repository
