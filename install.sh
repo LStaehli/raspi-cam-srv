@@ -86,7 +86,7 @@ User=${USER}
 WorkingDirectory=${SCRIPT_DIR}
 EnvironmentFile=${SCRIPT_DIR}/.env
 ExecStart=${VENV_DIR}/bin/gunicorn \
-    --bind \$CAM_HOST:\$CAM_PORT \
+    --bind \$CAM_BIND \
     --workers 1 \
     --threads 4 \
     --timeout 120 \
