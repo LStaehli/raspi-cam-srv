@@ -211,7 +211,36 @@ _UI_TEMPLATE = """<!DOCTYPE html>
 
 @bp.route("/")
 @require_auth
+@limiter.limit(Config.RATELIMIT_STREAM, per_method=False,
+               deduct_when=lambda resp: request.args.get("action") == "stream")
 def index():
+    """
+    Web UI, plus mjpg-streamer-compatible query-param endpoints:
+      /?action=stream    → MJPEG stream  (same as /stream/mjpeg)
+      /?action=snapshot  → JPEG snapshot (same as /stream/snapshot)
+    """
+    action = request.args.get("action")
+
+    if action == "stream":
+        return Response(
+            mjpeg_generator(_camera),
+            mimetype="multipart/x-mixed-replace; boundary=frame",
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    if action == "snapshot":
+        frame = _camera.capture_snapshot()
+        if frame is None:
+            return Response("Camera not ready", status=503)
+        return Response(
+            frame,
+            mimetype="image/jpeg",
+            headers={
+                "Content-Disposition": "inline; filename=snapshot.jpg",
+                "Cache-Control": "no-store",
+            },
+        )
+
     return render_template_string(_UI_TEMPLATE, default_format=Config.DEFAULT_FORMAT)
 
 

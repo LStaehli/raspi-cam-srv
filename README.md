@@ -234,6 +234,8 @@ You will be prompted for the username (`admin` by default) and the password you 
 | Method | Path | Auth | Description |
 |--------|------|:----:|-------------|
 | `GET` | `/` | yes | Web UI with live stream and format chooser |
+| `GET` | `/?action=stream` | yes | MJPEG stream — mjpg-streamer compatible alias |
+| `GET` | `/?action=snapshot` | yes | JPEG snapshot — mjpg-streamer compatible alias |
 | `GET` | `/health` | no | Health check — returns `{"status":"ok"}` |
 | `GET` | `/stream/mjpeg` | yes | Motion JPEG multipart stream |
 | `GET` | `/stream/snapshot` | yes | Single JPEG frame (downloadable) |
@@ -242,6 +244,10 @@ You will be prompted for the username (`admin` by default) and the password you 
 | `GET` | `/hls/stream.m3u8` | yes | HLS playlist (served with segments) |
 | `GET` | `/api/config` | yes | Read current runtime settings |
 | `POST` | `/api/config` | yes | Update quality, FPS, or format |
+
+> **mjpg-streamer compatibility:** clients that were previously pointed at a `mjpg-streamer` instance
+> (e.g. OctoPrint, Home Assistant, VLC) use `http://<host>:<port>/?action=stream` by default.
+> That URL works directly with this server — no client reconfiguration needed.
 
 ### Config API example
 
