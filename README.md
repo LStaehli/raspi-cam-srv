@@ -131,7 +131,32 @@ The installer will:
 4. Copy `.env.example` to `.env` (if not already present)
 5. Register and start a **systemd service** (`raspi-cam-srv`) that auto-starts on boot
 
-### 6. Verify the service
+### 6. Open the firewall port
+
+Raspberry Pi OS does not ship with ufw enabled. Install and configure it to allow traffic on port 8080:
+
+```bash
+sudo apt install ufw
+sudo ufw allow ssh        # keep SSH access open
+sudo ufw allow 8080/tcp
+sudo ufw enable
+sudo ufw status
+```
+
+Expected output:
+
+```
+Status: active
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW       Anywhere
+8080/tcp                   ALLOW       Anywhere
+```
+
+> If you change `CAM_PORT` later, run `sudo ufw allow <new-port>/tcp` and `sudo ufw delete allow 8080/tcp`.
+
+### 7. Verify the service
 
 ```bash
 sudo systemctl status raspi-cam-srv
@@ -142,6 +167,47 @@ View live logs:
 ```bash
 journalctl -u raspi-cam-srv -f
 ```
+
+Confirm the app is reachable from the Pi itself before testing from another device:
+
+```bash
+curl -u admin:your_password http://localhost:8080/health
+# expected: {"mock": false, "status": "ok"}
+```
+
+### 8. (Optional) Disable the Pi LEDs
+
+Useful when the Pi is deployed in a camera housing where indicator lights are unwanted.
+
+Edit the boot config file:
+
+```bash
+# Bookworm
+sudo nano /boot/firmware/config.txt
+
+# Bullseye and earlier
+sudo nano /boot/config.txt
+```
+
+Add at the bottom:
+
+```ini
+# Disable green activity LED
+dtparam=act_led_trigger=none
+dtparam=act_led_activelow=off
+
+# Disable red power LED
+dtparam=pwr_led_trigger=none
+dtparam=pwr_led_activelow=off
+```
+
+Then reboot:
+
+```bash
+sudo reboot
+```
+
+To re-enable the LEDs, remove those lines and reboot again.
 
 ---
 
