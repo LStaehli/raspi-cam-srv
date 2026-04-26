@@ -113,6 +113,33 @@ _UI_TEMPLATE = """<!DOCTYPE html>
       font-size: .85rem;
       color: #4af;
     }
+    #settings {
+      width: 100%;
+      max-width: 960px;
+      margin-top: 1.5rem;
+      background: #1a1a1a;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+    }
+    #settings h2 {
+      font-size: .8rem;
+      font-weight: 600;
+      margin-bottom: .75rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .setting-row label {
+      font-size: .85rem;
+      color: #aaa;
+      min-width: 70px;
+    }
+    .setting-row .btn-group { display: flex; gap: .5rem; }
   </style>
 </head>
 <body>
@@ -132,9 +159,23 @@ _UI_TEMPLATE = """<!DOCTYPE html>
   <p id="status">Select a format above to begin streaming.</p>
   <p id="snapshot-link"></p>
 
+  <div id="settings">
+    <h2>Settings</h2>
+    <div class="setting-row">
+      <label>Rotation</label>
+      <div class="btn-group" id="rotation-bar">
+        <button data-deg="0"   onclick="setRotation(0)">0°</button>
+        <button data-deg="90"  onclick="setRotation(90)">90°</button>
+        <button data-deg="180" onclick="setRotation(180)">180°</button>
+        <button data-deg="270" onclick="setRotation(270)">270°</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     let hlsInstance = null;
+    let currentFormat = null;
     const img   = document.getElementById('stream-img');
     const video = document.getElementById('stream-video');
     const status = document.getElementById('status');
@@ -159,6 +200,7 @@ _UI_TEMPLATE = """<!DOCTYPE html>
     }
 
     function setFormat(fmt) {
+      currentFormat = fmt;
       teardown();
       clearActive();
       btns[fmt].classList.add('active');
@@ -200,6 +242,37 @@ _UI_TEMPLATE = """<!DOCTYPE html>
           });
       }
     }
+
+    function updateRotationButtons(deg) {
+      document.querySelectorAll('#rotation-bar button').forEach(function(b) {
+        b.classList.toggle('active', parseInt(b.dataset.deg) === deg);
+      });
+    }
+
+    function setRotation(deg) {
+      fetch('/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({rotate: deg})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.errors) {
+          updateRotationButtons(deg);
+          // Refresh the active stream so rotation takes effect immediately
+          if (currentFormat === 'mjpeg') {
+            img.src = '/stream/mjpeg?t=' + Date.now();
+          } else if (currentFormat === 'snapshot') {
+            setFormat('snapshot');
+          }
+        }
+      });
+    }
+
+    // Load current rotation from server on page load
+    fetch('/api/config')
+      .then(function(r) { return r.json(); })
+      .then(function(cfg) { updateRotationButtons(cfg.rotate || 0); });
 
     // Auto-start with default format
     setFormat('{{ default_format }}');
@@ -316,6 +389,7 @@ def api_config_get():
             "fps": Config.CAMERA_FPS,
             "quality": Config.MJPEG_QUALITY,
             "default_format": Config.DEFAULT_FORMAT,
+            "rotate": Config.CAMERA_ROTATE,
             "mock": Config.MOCK_CAMERA,
             "tls": Config.TLS_ENABLED,
         }
@@ -323,6 +397,7 @@ def api_config_get():
 
 
 _ALLOWED_FORMATS = {"mjpeg", "snapshot", "hls"}
+_ALLOWED_ROTATIONS = {0, 90, 180, 270}
 
 
 @bp.route("/api/config", methods=["POST"])
@@ -351,6 +426,13 @@ def api_config_set():
             errors.append("fps must be 1–90")
         else:
             Config.CAMERA_FPS = fps
+
+    if "rotate" in data:
+        rot = int(data["rotate"])
+        if rot not in _ALLOWED_ROTATIONS:
+            errors.append(f"rotate must be one of {sorted(_ALLOWED_ROTATIONS)}")
+        else:
+            Config.CAMERA_ROTATE = rot
 
     if errors:
         return jsonify({"errors": errors}), 400

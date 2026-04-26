@@ -51,8 +51,9 @@ class BaseCamera(ABC):
             return self._frame
 
     def capture_snapshot(self) -> bytes | None:
-        """Return a single high-quality JPEG snapshot."""
-        return self._capture_snapshot_impl()
+        """Return a single high-quality JPEG snapshot (rotation applied)."""
+        data = self._capture_snapshot_impl()
+        return self._apply_rotation(data) if data is not None else None
 
     # ------------------------------------------------------------------ #
     #  Subclass responsibilities                                           #
@@ -66,9 +67,25 @@ class BaseCamera(ABC):
     def _capture_snapshot_impl(self) -> bytes | None:
         """Capture a single frame; may differ from stream quality."""
 
+    def _apply_rotation(self, data: bytes) -> bytes:
+        """Rotate a JPEG clockwise by Config.CAMERA_ROTATE degrees using Pillow."""
+        degrees = Config.CAMERA_ROTATE
+        if degrees == 0:
+            return data
+        try:
+            from PIL import Image  # type: ignore[import]
+            img = Image.open(io.BytesIO(data))
+            # PIL rotates counter-clockwise; negate for clockwise convention
+            img = img.rotate(-degrees, expand=True)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=Config.MJPEG_QUALITY)
+            return buf.getvalue()
+        except ImportError:
+            return data
+
     def _store_frame(self, data: bytes) -> None:
         with self._lock:
-            self._frame = data
+            self._frame = self._apply_rotation(data)
 
 
 # --------------------------------------------------------------------------- #

@@ -38,6 +38,8 @@ class Config:
     CAMERA_WIDTH: int = int(os.environ.get("CAM_WIDTH", "1280"))
     CAMERA_HEIGHT: int = int(os.environ.get("CAM_HEIGHT", "720"))
     CAMERA_FPS: int = int(os.environ.get("CAM_FPS", "15"))
+    # Clockwise rotation applied to every frame (0 / 90 / 180 / 270)
+    CAMERA_ROTATE: int = int(os.environ.get("CAM_ROTATE", "0"))
 
     # ------------------------------------------------------------------ #
     #  Streaming                                                           #
